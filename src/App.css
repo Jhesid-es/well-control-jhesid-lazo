@@ -7,7 +7,7 @@
 }
 
 .app-header {
-  padding: 20px 24px;
+  padding: 16px 24px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-card);
   position: sticky;
@@ -15,8 +15,14 @@
   z-index: 100;
 }
 
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
 .app-header h1 {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text-heading);
   margin: 0;
@@ -24,9 +30,35 @@
 }
 
 .subtitle {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
   margin-top: 2px;
+}
+
+.developer-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(139,92,246,0.12));
+  border: 1px solid rgba(59,130,246,0.25);
+  border-radius: 8px;
+}
+
+.dev-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.dev-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
 }
 
 .app-layout {
@@ -52,6 +84,15 @@
   padding: 24px;
 }
 
+.app-footer {
+  margin-top: 48px;
+  padding: 16px 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+}
+
 /* Form Styles */
 .kill-sheet-form {
   padding: 20px;
@@ -69,7 +110,7 @@
 }
 
 .group-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -127,19 +168,19 @@
 }
 
 .results-panel h3 {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-heading);
-  margin: 24px 0 12px;
+  margin: 24px 0 10px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
 }
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 10px;
-  margin-bottom: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .metric-card {
@@ -147,7 +188,7 @@
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
   border-radius: 8px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   transition: transform 0.1s;
 }
 
@@ -156,7 +197,7 @@
 }
 
 .metric-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -165,23 +206,30 @@
 }
 
 .metric-value {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-heading);
   font-variant-numeric: tabular-nums;
 }
 
 .metric-unit {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 400;
   color: var(--text-muted);
   margin-left: 4px;
 }
 
+/* Chart Grid */
+.charts-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
 /* Recharts overrides */
 .recharts-text {
   fill: var(--text-muted) !important;
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .recharts-cartesian-grid-horizontal line,
@@ -197,20 +245,14 @@
 
 .recharts-legend-item-text {
   color: var(--text-muted) !important;
-  font-size: 12px;
+  font-size: 11px;
 }
 
-/* Wellbore geometry section */
-h3 {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-heading);
-  margin: 24px 0 12px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
+.recharts-surface {
+  overflow: visible;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
   .sidebar {
     width: 100%;
     min-width: 100%;
@@ -229,6 +271,16 @@ h3 {
     grid-template-columns: 1fr;
   }
   .metrics-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+  .charts-grid-2col {
+    grid-template-columns: 1fr;
+  }
+  .header-top {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .developer-badge {
+    align-items: flex-start;
   }
 }

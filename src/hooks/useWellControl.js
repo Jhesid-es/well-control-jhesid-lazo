@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 
+const g = 0.052;
+
 const initialData = {
   tvd: 10000,
   md: 10000,
@@ -17,8 +19,6 @@ const initialData = {
   pumpOutputPerStroke: 0.1,
   slowPumpRateSPM: 30,
   scratchPressureSCR: 800,
-  sectionName: '',
-
   dpCapacity: 0.0142,
   dcCapacity: 0.0035,
   hcCapacity: 0.04,
@@ -36,118 +36,185 @@ export default function useWellControl() {
 
   const calc = useMemo(() => {
     const d = data;
-    const g = 0.052;
 
     const killMudWeight = d.mudWeight + d.sidpp / (g * d.tvd);
+
     const icp = d.scratchPressureSCR + d.sidpp;
-    const fcp = killMudWeight * d.scratchPressureSCR / d.mudWeight;
+    const fcp = d.scratchPressureSCR * killMudWeight / d.mudWeight;
 
-    const dpVol = d.dpCapacity * d.md / 1000;
+    const dpLen = d.md - d.dcLength;
+
+    const dpVol = d.dpCapacity * dpLen / 1000;
     const dcVol = d.dcCapacity * d.dcLength / 1000;
-    const hcOpen = d.md - d.casingDepth - d.dcLength;
-    const hcVol = hcOpen > 0 ? d.hcCapacity * hcOpen / 1000 : 0;
-    const casingVol = d.casingCapacity * d.casingDepth / 1000;
-    const totalVol = dpVol + dcVol + hcVol + casingVol;
+    const stringVol = dpVol + dcVol;
 
-    const strokesDP = d.md / 100 * 100 / d.pumpOutputPerStroke;
-    const strokesDC = d.dcLength / 100 * 100 / d.pumpOutputPerStroke;
-    const strokesHC = hcOpen > 0 ? hcOpen / 100 * 100 / d.pumpOutputPerStroke : 0;
-    const strokesCasing = d.casingDepth / 100 * 100 / d.pumpOutputPerStroke;
-    const totalStrokes = strokesDP + strokesDC + strokesHC + strokesCasing;
+    const ohLen = d.md - d.casingDepth - d.dcLength;
+    const casingAnnVol = d.casingCapacity * d.casingDepth / 1000;
+    const ohAnnVol = ohLen > 0 ? d.hcCapacity * ohLen / 1000 : 0;
+    const ohDCAnnVol = d.dcLength > 0 ? d.hcCapacity * d.dcLength / 1000 : 0;
+    const totalAnnVol = casingAnnVol + ohAnnVol + ohDCAnnVol;
+    const totalVol = stringVol + totalAnnVol;
 
-    const psiPerStrokeDP = d.scratchPressureSCR / totalStrokes;
-    const psiPerStrokeDC = d.scratchPressureSCR / totalStrokes;
-    const psiPerStrokeHC = d.scratchPressureSCR / totalStrokes;
+    const stringStrokes = stringVol / d.pumpOutputPerStroke;
+    const casingStrokes = casingAnnVol / d.pumpOutputPerStroke;
+    const ohStrokes = ohAnnVol / d.pumpOutputPerStroke;
+    const ohDCStrokes = ohDCAnnVol / d.pumpOutputPerStroke;
+    const annStrokes = casingStrokes + ohStrokes + ohDCStrokes;
+    const totalStrokes = stringStrokes + annStrokes;
 
     const bottomPressure = d.sidpp + g * d.mudWeight * d.tvd;
     const formationPressure = g * killMudWeight * d.tvd;
-    const maasp = g * (d.mudWeight) * 0.5 * 0.052 * d.casingDepth;
-    const maasp_simplified = 0.052 * d.casingDepth * (killMudWeight - d.mudWeight);
-
-    const instrVol = d.pitGain;
+    const maasp = g * (killMudWeight - d.mudWeight) * d.casingDepth;
+    const staticBHP = g * d.mudWeight * d.tvd;
 
     return {
       killMudWeight: Math.max(killMudWeight, 0),
       icp: Math.max(icp, 0),
       fcp: Math.max(fcp, 0),
-      dpVol, dcVol, hcVol, casingVol, totalVol,
-      strokesDP: Math.round(strokesDP),
-      strokesDC: Math.round(strokesDC),
-      strokesHC: Math.round(strokesHC),
-      strokesCasing: Math.round(strokesCasing),
+      dpVol: Math.round(dpVol * 100) / 100,
+      dcVol: Math.round(dcVol * 100) / 100,
+      stringVol: Math.round(stringVol * 100) / 100,
+      casingAnnVol: Math.round(casingAnnVol * 100) / 100,
+      ohAnnVol: Math.round(ohAnnVol * 100) / 100,
+      ohDCAnnVol: Math.round(ohDCAnnVol * 100) / 100,
+      totalAnnVol: Math.round(totalAnnVol * 100) / 100,
+      totalVol: Math.round(totalVol * 100) / 100,
+      stringStrokes: Math.round(stringStrokes),
+      casingStrokes: Math.round(casingStrokes),
+      ohStrokes: Math.round(ohStrokes),
+      ohDCStrokes: Math.round(ohDCStrokes),
+      annStrokes: Math.round(annStrokes),
       totalStrokes: Math.round(totalStrokes),
-      timeDP: Math.round(strokesDP / d.slowPumpRateSPM * 60),
-      timeDC: Math.round(strokesDC / d.slowPumpRateSPM * 60),
-      timeHC: Math.round(strokesHC / d.slowPumpRateSPM * 60),
-      timeCasing: Math.round(strokesCasing / d.slowPumpRateSPM * 60),
+      timeString: Math.round(stringStrokes / d.slowPumpRateSPM * 60),
+      timeAnn: Math.round(annStrokes / d.slowPumpRateSPM * 60),
       totalTime: Math.round(totalStrokes / d.slowPumpRateSPM * 60),
       bottomPressure: Math.round(bottomPressure),
       formationPressure: Math.round(formationPressure),
-      maasp: Math.round(maasp_simplified),
-      instrVol: Math.round(instrVol * 10) / 10,
+      staticBHP: Math.round(staticBHP),
+      maasp: Math.round(Math.max(maasp, 0)),
+      instrVol: d.pitGain,
       sidpp: d.sidpp,
       sicp: d.sicp,
       mudWeight: d.mudWeight,
+      dpLen,
+      ohLen: Math.max(ohLen, 0),
+      pumpOutput: d.pumpOutputPerStroke,
+      spm: d.slowPumpRateSPM,
     };
   }, [data]);
 
   const strokeSchedule = useMemo(() => {
     const schedule = [];
-    const total = calc.totalStrokes;
-
-    const dpStart = 0;
-    const dpEnd = calc.strokesDP;
-    const dcStart = dpEnd;
-    const dcEnd = dcStart + calc.strokesDC;
-    const hcStart = dcEnd;
-    const hcEnd = hcStart + calc.strokesHC;
-    const casingStart = hcEnd;
-    const casingEnd = casingStart + calc.strokesCasing;
-
-    const dpPressureStart = calc.icp;
-    const dpPressureEnd = calc.icp - (calc.icp - calc.fcp) * (calc.strokesDP / total);
-    const dcPressureEnd = calc.icp - (calc.icp - calc.fcp) * ((calc.strokesDP + calc.strokesDC) / total);
-    const hcPressureEnd = calc.icp - (calc.icp - calc.fcp) * ((calc.strokesDP + calc.strokesDC + calc.strokesHC) / total);
-    const casingPressureEnd = calc.fcp;
+    const c = calc;
 
     schedule.push({
-      section: 'Drill Pipe',
-      strokesFrom: dpStart,
-      strokesTo: dpEnd,
-      pressureFrom: Math.round(dpPressureStart),
-      pressureTo: Math.round(dpPressureEnd),
-      volume: Math.round(calc.dpVol),
+      section: 'String (DP)',
+      type: 'string',
+      subType: 'dp',
+      strokesFrom: 0,
+      strokesTo: c.stringStrokes * (c.dpVol / (c.dpVol + c.dcVol + 0.001)),
+      pressureFrom: c.icp,
+      pressureTo: c.icp - (c.icp - c.fcp) * (c.dpVol / (c.dpVol + c.dcVol + 0.001)),
+      volume: c.dpVol,
+      strokes: Math.round(c.stringStrokes * (c.dpVol / (c.dpVol + c.dcVol + 0.001))),
       color: '#3b82f6',
     });
-    schedule.push({
-      section: 'Drill Collar',
-      strokesFrom: dcStart,
-      strokesTo: dcEnd,
-      pressureFrom: Math.round(dpPressureEnd),
-      pressureTo: Math.round(dcPressureEnd),
-      volume: Math.round(calc.dcVol),
-      color: '#8b5cf6',
-    });
-    schedule.push({
-      section: 'Open Hole',
-      strokesFrom: hcStart,
-      strokesTo: hcEnd,
-      pressureFrom: Math.round(dcPressureEnd),
-      pressureTo: Math.round(hcPressureEnd),
-      volume: Math.round(calc.hcVol),
-      color: '#f59e0b',
-    });
-    schedule.push({
-      section: 'Casing',
-      strokesFrom: casingStart,
-      strokesTo: casingEnd,
-      pressureFrom: Math.round(hcPressureEnd),
-      pressureTo: Math.round(casingPressureEnd),
-      volume: Math.round(calc.casingVol),
-      color: '#10b981',
-    });
 
-    return schedule.filter(s => s.strokesTo > s.strokesFrom);
+    if (c.dcVol > 0) {
+      const dpStrokes = c.stringStrokes * (c.dpVol / (c.dpVol + c.dcVol));
+      const dpPressureEnd = c.icp - (c.icp - c.fcp) * (c.dpVol / (c.dpVol + c.dcVol));
+      schedule.push({
+        section: 'String (DC)',
+        type: 'string',
+        subType: 'dc',
+        strokesFrom: dpStrokes,
+        strokesTo: c.stringStrokes,
+        pressureFrom: dpPressureEnd,
+        pressureTo: c.fcp,
+        volume: c.dcVol,
+        strokes: Math.round(c.stringStrokes - dpStrokes),
+        color: '#8b5cf6',
+      });
+    }
+
+    let cumStrokes = c.stringStrokes;
+    if (c.casingAnnVol > 0) {
+      schedule.push({
+        section: 'Casing Annulus',
+        type: 'annular',
+        strokesFrom: cumStrokes,
+        strokesTo: cumStrokes + c.casingStrokes,
+        pressureFrom: c.fcp,
+        pressureTo: c.fcp,
+        volume: c.casingAnnVol,
+        strokes: c.casingStrokes,
+        color: '#10b981',
+      });
+      cumStrokes += c.casingStrokes;
+    }
+
+    if (c.ohAnnVol > 0) {
+      schedule.push({
+        section: 'OH Annulus (DP)',
+        type: 'annular',
+        strokesFrom: cumStrokes,
+        strokesTo: cumStrokes + c.ohStrokes,
+        pressureFrom: c.fcp,
+        pressureTo: c.fcp,
+        volume: c.ohAnnVol,
+        strokes: c.ohStrokes,
+        color: '#f59e0b',
+      });
+      cumStrokes += c.ohStrokes;
+    }
+
+    if (c.ohDCAnnVol > 0) {
+      schedule.push({
+        section: 'OH Annulus (DC)',
+        type: 'annular',
+        strokesFrom: cumStrokes,
+        strokesTo: cumStrokes + c.ohDCStrokes,
+        pressureFrom: c.fcp,
+        pressureTo: c.fcp,
+        volume: c.ohDCAnnVol,
+        strokes: c.ohDCStrokes,
+        color: '#ec4899',
+      });
+    }
+
+    return schedule.filter(s => Math.round(s.strokesTo - s.strokesFrom) > 0);
+  }, [calc]);
+
+  const pressureProfile = useMemo(() => {
+    const points = [];
+    const total = calc.totalStrokes;
+    const steps = Math.min(100, total);
+
+    for (let i = 0; i <= steps; i++) {
+      const strokeRatio = i / steps;
+      const strokes = strokeRatio * total;
+      let pressure;
+
+      if (strokes <= calc.stringStrokes) {
+        const ratio = calc.stringStrokes > 0 ? strokes / calc.stringStrokes : 1;
+        pressure = calc.icp - (calc.icp - calc.fcp) * ratio;
+      } else {
+        pressure = calc.fcp;
+      }
+
+      const bhp = calc.bottomPressure;
+
+      const annPresFriction = pressure;
+      const casingP = calc.sicp - (strokes / total) * (calc.sicp - 0);
+
+      points.push({
+        strokes: Math.round(strokes),
+        pumpPressure: Math.round(pressure),
+        bhp: bhp,
+        casingPressure: Math.max(0, Math.round(casingP)),
+      });
+    }
+    return points;
   }, [calc]);
 
   const wellGeometry = useMemo(() => {
@@ -202,5 +269,5 @@ export default function useWellControl() {
     return sections;
   }, [data]);
 
-  return { data, calc, strokeSchedule, wellGeometry, updateField };
+  return { data, calc, strokeSchedule, pressureProfile, wellGeometry, updateField };
 }
