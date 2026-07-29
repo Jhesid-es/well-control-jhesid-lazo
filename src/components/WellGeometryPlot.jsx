@@ -71,8 +71,7 @@ export default function WellGeometryPlot({ wellGeometry, md, tvd }) {
             <YAxis
               type="number"
               dataKey="depth"
-              domain={[0, md]}
-              reversed
+              domain={[md, 0]}
               tick={{ fill: '#94a3b8', fontSize: 10 }}
               tickFormatter={(v) => `${Math.round(v)}'`}
               label={{ value: 'Depth (ft)', angle: -90, position: 'insideLeft', fill: '#94a3b8' }}
